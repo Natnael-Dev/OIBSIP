@@ -1,0 +1,38 @@
+{
+  "name": "crust-and-craft-server",
+  "version": "1.0.0",
+  "description": "Production-Grade Pizza Delivery & Inventory Automation Backend for Oasis Infobyte SIP",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "seed": "node seed/seedData.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "keywords": [
+    "oibsip",
+    "oasis-infobyte",
+    "pizza-delivery",
+    "inventory-automation",
+    "node-cron",
+    "razorpay",
+    "mern"
+  ],
+  "author": "Natnael Tezazu",
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.6.1",
+    "morgan": "^1.10.0",
+    "node-cron": "^3.0.3",
+    "nodemailer": "^6.9.15",
+    "razorpay": "^2.9.4",
+    "socket.io": "^4.7.5"
+  }
+}
