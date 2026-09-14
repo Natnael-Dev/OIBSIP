@@ -1,0 +1,102 @@
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap');
+@import url('https://api.fontshare.com/v2/css?f[]=switzer@400,500,600&display=swap');
+@import 'tailwindcss';
+
+@theme inline {
+  --color-obsidian: #080B11;
+  --color-slate: #0F172A;
+  --color-steel: #1E293B;
+  --color-wood: #78350F;
+  --color-crust: #B45309;
+  --color-amber: #F59E0B;
+  --color-gold: #D97706;
+  --color-basil: #10B981;
+  --color-chili: #EF4444;
+  --color-cyan: #06B6D4;
+
+  --font-display: 'Instrument Serif', serif;
+  --font-sans: 'Switzer', sans-serif;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(245, 158, 11, 0.3) transparent;
+}
+
+body {
+  background-color: #080B11;
+  color: #F8FAFC;
+  font-family: 'Switzer', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(245, 158, 11, 0.3);
+  border-radius: 2px;
+}
+
+.font-display {
+  font-family: 'Instrument Serif', serif;
+}
+
+.font-sans {
+  font-family: 'Switzer', sans-serif;
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, #F59E0B 0%, #D97706 50%, #B45309 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Typography scale */
+.type-hero {
+  font-family: 'Instrument Serif', serif;
+  font-size: clamp(2.5rem, 8vw, 6rem);
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+}
+
+.type-section {
+  font-family: 'Instrument Serif', serif;
+  font-size: clamp(2.25rem, 5vw, 3rem);
+  line-height: 1.1;
+}
+
+.type-body {
+  font-family: 'Switzer', sans-serif;
+  font-size: 1rem;
+  line-height: 1.65;
+  color: #CBD5E1;
+}
+
+.type-label {
+  font-family: 'Switzer', sans-serif;
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.glow-amber {
+  box-shadow: 0 0 40px rgba(245, 158, 11, 0.2), 0 0 80px rgba(245, 158, 11, 0.06);
+}
+
+.glow-chili {
+  box-shadow: 0 0 40px rgba(239, 68, 68, 0.25), 0 0 80px rgba(239, 68, 68, 0.08);
+}
+
+.glow-basil {
+  box-shadow: 0 0 40px rgba(16, 185, 129, 0.25), 0 0 80px rgba(16, 185, 129, 0.08);
+}

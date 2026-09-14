@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800">
+  <rect width="800" height="800" fill="none"/>
+  <circle cx="400" cy="400" r="340" fill="#A16207" opacity="0.2" stroke="rgba(255,255,255,0.3)" stroke-width="2" stroke-dasharray="8 4"/><text x="400" y="420" text-anchor="middle" fill="rgba(255,255,255,0.2)" font-size="60" font-family="sans-serif">GF</text>
+</svg>
