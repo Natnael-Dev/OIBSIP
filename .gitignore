@@ -18,6 +18,16 @@ dist/
 build/
 .next/
 out/
+.vite/
+*.tsbuildinfo
+
+# Temporary & Working Files
+*.zip
+tmp_*/
+docx_dump.txt
+.figma/
+.mise.toml
+.claude*
 
 # IDE & OS
 .DS_Store
@@ -29,3 +39,4 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+
