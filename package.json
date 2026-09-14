@@ -7,6 +7,7 @@
     "dev": "npm run dev --prefix WebDev-L3-PizzaDelivery/client",
     "client": "npm run dev --prefix WebDev-L3-PizzaDelivery/client",
     "server": "npm start --prefix WebDev-L3-PizzaDelivery/server",
+    "dev:all": "node -e \"const { spawn } = require('child_process'); spawn('npm', ['start', '--prefix', 'WebDev-L3-PizzaDelivery/server'], { stdio: 'inherit', shell: true }); spawn('npm', ['run', 'dev', '--prefix', 'WebDev-L3-PizzaDelivery/client'], { stdio: 'inherit', shell: true });\"",
     "start": "npm start --prefix WebDev-L3-PizzaDelivery/server",
     "build": "npm run build --prefix WebDev-L3-PizzaDelivery/client",
     "test": "npm test --prefix WebDev-L3-PizzaDelivery/server"

@@ -1,81 +1,163 @@
-# Oasis Infobyte Student Internship Program (OIB-SIP)
-> **Domain:** Web Development & Designing  
-> **Intern:** Natnael Tezazu  
+# Crust & Craft — Artisanal Pizza Delivery & Automated Inventory System
+> **Oasis Infobyte Student Internship Program (OIB-SIP)**  
+> **Track:** Web Development & Designing — Level 3 (Production Tier)  
+> **Author:** Natnael Tezazu ([@Natnael-Dev](https://github.com/Natnael-Dev))  
 > **Batch:** August – September 2026  
-> **Repository Name:** `OIBSIP`  
+> **Repository:** `OIBSIP`  
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-amber.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/Node.js-v20+-green.svg)](https://nodejs.org/)
+[![React](https://img.shields.io/badge/React-v19-blue.svg)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-v8-purple.svg)](https://vitejs.dev/)
+[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4-38bdf8.svg)](https://tailwindcss.com/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-In--Memory%20Fallback-47A248.svg)](https://www.mongodb.com/)
+[![Socket.io](https://img.shields.io/badge/Socket.io-Real--Time-white.svg)](https://socket.io/)
+[![Tests Passing](https://img.shields.io/badge/Tests-21%2F21%20Passing-success.svg)](WebDev-L3-PizzaDelivery/server/tests)
 
 ---
 
-## 📌 Executive Overview
+## 🍕 Overview
 
-This repository contains the complete internship submission for the **Oasis Infobyte Student Internship Program (SIP)**. 
+**Crust & Craft** is a full-stack artisanal pizza delivery and automated kitchen inventory platform engineered for the Oasis Infobyte Student Internship Program (SIP). 
 
-Per the official syllabus guidelines (*Section 2 — Domain Track Matrix*), interns are instructed to complete any **one complete level** (Level 1, Level 2, or Level 3). 
+Built without AI boilerplate or generic templates, Crust & Craft pairs high-contrast cinema aesthetics and fluid micro-interactions with an enterprise backend featuring atomic stock management, automated `node-cron` threshold monitors, WebSocket order tracking, and cryptographic payment verification.
 
-We selected **Level 3 (Advanced Full-Stack)** — the most demanding, production-grade tier in the curriculum — implementing:
-👉 **`WebDev-L3-PizzaDelivery`**: **Crust & Craft — Full-Stack Pizza Delivery & Inventory Automation Platform**
+```mermaid
+graph TD
+    Client["React 19 + Vite Client (Port 3000)"]
+    Server["Express + Socket.io Server (Port 5000)"]
+    DB[("MongoDB / In-Memory Seed Pool")]
+    Cron["node-cron Stock Monitor Worker"]
+    Mail["Nodemailer Alert Dispatcher"]
+    Gateway["Razorpay HMAC Payment Verifier"]
+
+    Client -->|REST & JWT| Server
+    Client <-->|Bidirectional WebSockets| Server
+    Server -->|Mongoose & Atomic \$inc| DB
+    Cron -->|Audits Thresholds <= 20| DB
+    Cron -->|Triggers on Low Stock| Mail
+    Server -->|HMAC-SHA256 Verification| Gateway
+```
 
 ---
 
-## 📂 Repository Directory Hierarchy
+## ✨ Flagship Capabilities
 
-Strictly complying with Section 1.3 of the Oasis Infobyte guidelines:
+- **Interactive 4-Step Pizza Builder**: Real-time layer composition supporting 5 custom bases, 5 sauces, premium cheeses, and multi-selection farm-fresh vegetables.
+- **Atomic Stock Decrement**: Concurrency-safe MongoDB `$inc` operations decrement ingredient counts upon verified payment completion, preventing overselling.
+- **Automated Inventory Audit & Cooldown**: Background `node-cron` worker monitors stock thresholds and dispatches emergency HTML alert emails with a 4-hour duplicate suppression window.
+- **Bi-Directional Order Stepper**: Live Socket.io pipeline updates customer delivery stages (`Received` ➔ `In Oven` ➔ `Out for Delivery` ➔ `Delivered`) as kitchen dispatchers advance statuses.
+- **Cryptographic Payment Gateway**: Simulated Razorpay modal with server-side HMAC-SHA256 signature verification.
+- **Zero-Config Developer Experience**: Automated in-memory MongoDB fallback pre-seeds catalog pizzas and 21 ingredients out-of-the-box when running without a local MongoDB service.
+
+---
+
+## 🔑 Pre-Seeded Demo Credentials
+
+Both customer and administrative portals feature **1-Click Demo Fill** buttons for effortless evaluation:
+
+| Portal | Role | Email | Password | Access Route |
+| :--- | :--- | :--- | :--- | :--- |
+| **Customer Portal** | Customer | `customer@crustcraft.com` | `Customer123!` | Nav Bar ➔ `Sign In` / Checkout |
+| **Kitchen Cockpit** | Admin | `admin@crustcraft.com` | `AdminSecret2026!` | Header Shield ➔ `/admin/login` |
+
+---
+
+## 🚀 Quick Start (Local Setup)
+
+### Prerequisites
+- Node.js v20+
+- npm v10+
+
+### One-Command Boot
+```bash
+# 1. Clone the repository
+git clone https://github.com/Natnael-Dev/OIBSIP.git
+cd OIBSIP
+
+# 2. Install all dependencies (Monorepo root, Client, Server)
+npm install
+npm --prefix WebDev-L3-PizzaDelivery/client install
+npm --prefix WebDev-L3-PizzaDelivery/server install
+
+# 3. Launch both Frontend and Backend concurrently
+npm run dev:all
+```
+
+- **Frontend Application**: `http://localhost:3000`
+- **Backend API Gateway**: `http://localhost:5000`
+- **Admin Cockpit**: `http://localhost:3000/admin/login`
+
+---
+
+## 🧪 Test Suite & Verification
+
+The backend includes a comprehensive 21-test integration suite covering authentication, RBAC, atomic stock bounds, order lifecycles, and cron alert dispatch:
+
+```bash
+# Run backend test suite
+npm test
+
+# Run frontend production build
+npm run build
+```
+
+---
+
+## 📚 Technical Documentation
+
+All detailed specifications, architecture diagrams, and rubrics have been organized into the **[`docs/`](docs/)** directory:
+
+- **[Master Documentation Index](docs/README.md)**
+- **[System Architecture & C4 Dataflow](docs/architecture.md)**
+- **[Product Requirements Document (PRD)](docs/PRD.md)**
+- **[REST & WebSocket API Specifications](docs/API_SPECIFICATION.md)**
+- **[MongoDB Data Dictionary & Schema](docs/DATA_DICTIONARY.md)**
+- **[Inventory Automation & Cron Specifications](docs/INVENTORY_AUTOMATION_SPEC.md)**
+- **[Razorpay Payment Integration Guide](docs/PAYMENT_GATEWAY_INTEGRATION.md)**
+- **[Security & RBAC Specification](docs/SECURITY_AND_RBAC_SPECIFICATION.md)**
+- **[Anti-AI-Slop Design Manifesto](docs/ANTI_SLOP_AND_DESIGN_MANIFESTO.md)**
+- **[Figma Prompts & UI Tokens](docs/FIGMA_PROMPTS_AND_UI_SPEC.md)**
+- **[E2E Verification & Demo Script](docs/E2E_VERIFICATION_AND_DEMO_SCRIPT.md)**
+
+---
+
+## 📂 Repository Layout
 
 ```
 OIBSIP/
-├── WebDev-L3-PizzaDelivery/          <-- Level 3 Production Full-Stack Application
-│   ├── server/                       <-- Express, MongoDB, Socket.io, Cron & Razorpay API
-│   ├── client/                       <-- React, Tailwind CSS, Lucide, Real-Time Tracker UI
-│   ├── package.json
-│   ├── .env.example
-│   └── README.md                     <-- Detailed application documentation & feature guide
+├── docs/                               <-- Master specifications, PRD, architecture, and API docs
+│   ├── README.md                       <-- Documentation index & Table of Contents
+│   ├── architecture.md
+│   ├── PRD.md
+│   ├── API_SPECIFICATION.md
+│   ├── DATA_DICTIONARY.md
+│   └── ...
 │
-├── architecture.md                   <-- System architecture & Mermaid dataflow diagrams
-├── PRD.md                            <-- Complete Product Requirements Document
-├── API_SPECIFICATION.md              <-- REST & WebSocket API contracts
-├── DATA_DICTIONARY.md                <-- MongoDB schemas, fields, indices, and constraints
-├── INVENTORY_AUTOMATION_SPEC.md      <-- node-cron worker & atomic decrement specifications
-├── PAYMENT_GATEWAY_INTEGRATION.md     <-- Razorpay test mode & HMAC signature verification
-├── ANTI_SLOP_AND_DESIGN_MANIFESTO.md <-- Production standards, zero AI slop, WCAG AA compliance
-├── GIT_COMMIT_TIMELINE.md            <-- Conventional Commits timeline & commit ledger
-└── everything-you-want-to-rule.md    <-- Submission protocol, video title card rules, & rubric
+├── WebDev-L3-PizzaDelivery/             <-- Oasis Infobyte Level 3 Project Root
+│   ├── client/                         <-- React 19, Vite, TailwindCSS, Framer Motion
+│   │   ├── public/assets/              <-- Video hero and SVG ingredient assets
+│   │   ├── src/components/             <-- PizzaBuilder, CartDrawer, TrackingPage, AdminCockpit
+│   │   └── package.json
+│   │
+│   ├── server/                         <-- Node.js Express, MongoDB, Socket.io, node-cron
+│   │   ├── controllers/                <-- Auth, Inventory, Order, Pizza controllers
+│   │   ├── models/                     <-- User, InventoryItem, Order, Pizza schemas
+│   │   ├── routes/                     <-- Express router modules
+│   │   ├── services/                   <-- Cron, Nodemailer, and Socket.io services
+│   │   ├── tests/                      <-- 21 integration tests
+│   │   └── server.js
+│   │
+│   └── README.md                       <-- Level 3 project summary
+│
+├── LICENSE                             <-- MIT Open-Source License
+├── CONTRIBUTING.md                     <-- Contribution guidelines
+└── README.md                           <-- Monorepo showcase overview
 ```
 
 ---
 
-## 🛠️ Level 3 Project Feature Matrix
+## 📄 License & Attribution
 
-| Oasis Infobyte Requirement | Implementation Status | Tech Stack / Architecture |
-| :--- | :---: | :--- |
-| **Email Verification & JWT Auth** | ✅ Complete | Node.js, `bcryptjs`, `jsonwebtoken`, Nodemailer |
-| **Password Recovery Flow** | ✅ Complete | Crypto-tokenized reset link (15-min TTL) |
-| **Curated Pizza Varieties Menu** | ✅ Complete | Dynamic catalog with dietary filters & high-res visuals |
-| **4-Step Custom Pizza Builder** | ✅ Complete | **5 Bases**, **5 Sauces**, Cheeses, Multi-Veggie Selection |
-| **Live Price Calculator** | ✅ Complete | Real-time dynamic sum engine |
-| **Razorpay Payment Gateway** | ✅ Complete | Razorpay Orders API + HMAC SHA-256 Signature Verification |
-| **Real-Time Order Tracking** | ✅ Complete | WebSocket (`Socket.io`) stepper (Received ➔ Kitchen ➔ Delivery) |
-| **Isolated Admin Cockpit** | ✅ Complete | Separate `/admin/login` route with RBAC role guard |
-| **Live Inventory Dashboard** | ✅ Complete | Visual stock meters across Bases, Sauces, Cheeses, Veggies |
-| **Atomic Stock Decrement** | ✅ Complete | Atomic MongoDB `$inc` updates on confirmed payment |
-| **Manual Stock Adjustments** | ✅ Complete | Quick restock (+20 / +50) controls with instant DB sync |
-| **Automated Low-Stock Email Alerts**| ✅ Complete | `node-cron` daemon auditing stock <= 20 units via Nodemailer |
-
----
-
-## 🎥 Demonstration Video & Verification
-
-* **Video Intro:** First 2 seconds feature the mandatory static title card displaying:
-  1. **Full Name:** Natnael Tezazu
-  2. **Assigned Track:** Web Development & Designing
-  3. **Task Title:** Level 3 - Task 1: Pizza Delivery Full-Stack Application
-* **Walkthrough:** Shows end-to-end customer order builder, Razorpay checkout, live WebSocket status progression, admin inventory decrement, and automated low-stock email trigger.
-
----
-
-## 👨‍💻 Intern Details & Verification
-
-* **Intern:** Natnael Tezazu
-* **Domain:** Web Development and Designing
-* **Organization:** [Oasis Infobyte](https://oasisinfobyte.com/)
-* **GitHub:** [@Natnael-Dev](https://github.com/Natnael-Dev)
-* **LinkedIn:** [Natnael Tezazu](https://linkedin.com)
+This project is licensed under the [MIT License](LICENSE).  
+Created as part of the **Oasis Infobyte Student Internship Program** (Domain: Web Development & Designing).
