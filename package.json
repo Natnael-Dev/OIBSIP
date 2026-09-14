@@ -1,0 +1,14 @@
+{
+  "name": "crust-and-craft-suite",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Crust & Craft: Level 3 Oasis Infobyte Full-Stack Pizza Delivery Platform",
+  "scripts": {
+    "dev": "npm run dev --prefix WebDev-L3-PizzaDelivery/client",
+    "client": "npm run dev --prefix WebDev-L3-PizzaDelivery/client",
+    "server": "npm start --prefix WebDev-L3-PizzaDelivery/server",
+    "start": "npm start --prefix WebDev-L3-PizzaDelivery/server",
+    "build": "npm run build --prefix WebDev-L3-PizzaDelivery/client",
+    "test": "npm test --prefix WebDev-L3-PizzaDelivery/server"
+  }
+}
