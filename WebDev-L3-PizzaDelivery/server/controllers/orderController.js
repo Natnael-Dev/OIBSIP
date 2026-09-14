@@ -8,6 +8,20 @@ import { runInventoryAudit } from '../services/cronService.js';
 const atomicDecrementStock = async (items) => {
   const bulkOps = [];
 
+  const makeFilter = (val, category, qty) => {
+    if (!val) return null;
+    const clean = String(val).trim();
+    const pattern = clean.replace(/[-_]/g, '.*');
+    return {
+      category,
+      $or: [
+        { name: clean },
+        { name: new RegExp(pattern, 'i') }
+      ],
+      stockQuantity: { $gte: qty }
+    };
+  };
+
   for (const item of items) {
     const qty = item.quantity || 1;
 
@@ -15,7 +29,7 @@ const atomicDecrementStock = async (items) => {
     if (item.base) {
       bulkOps.push({
         updateOne: {
-          filter: { name: item.base, category: 'base', stockQuantity: { $gte: qty } },
+          filter: makeFilter(item.base, 'base', qty),
           update: { $inc: { stockQuantity: -qty } }
         }
       });
@@ -25,7 +39,7 @@ const atomicDecrementStock = async (items) => {
     if (item.sauce) {
       bulkOps.push({
         updateOne: {
-          filter: { name: item.sauce, category: 'sauce', stockQuantity: { $gte: qty } },
+          filter: makeFilter(item.sauce, 'sauce', qty),
           update: { $inc: { stockQuantity: -qty } }
         }
       });
@@ -35,7 +49,7 @@ const atomicDecrementStock = async (items) => {
     if (item.cheese) {
       bulkOps.push({
         updateOne: {
-          filter: { name: item.cheese, category: 'cheese', stockQuantity: { $gte: qty } },
+          filter: makeFilter(item.cheese, 'cheese', qty),
           update: { $inc: { stockQuantity: -qty } }
         }
       });
@@ -46,7 +60,7 @@ const atomicDecrementStock = async (items) => {
       for (const v of item.veggies) {
         bulkOps.push({
           updateOne: {
-            filter: { name: v, category: 'veggie', stockQuantity: { $gte: qty } },
+            filter: makeFilter(v, 'veggie', qty),
             update: { $inc: { stockQuantity: -qty } }
           }
         });
