@@ -20,5 +20,6 @@ router.get('/track/:orderNumber', getOrderTracking);
 // Admin Order Management
 router.get('/admin/all', protect, requireAdmin, getAllOrdersAdmin);
 router.patch('/admin/:id/status', protect, requireAdmin, updateOrderStatusAdmin);
+router.patch('/:id/status', protect, requireAdmin, updateOrderStatusAdmin);
 
 export default router;

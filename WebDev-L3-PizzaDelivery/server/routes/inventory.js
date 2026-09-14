@@ -14,5 +14,6 @@ router.get('/', getInventory);
 router.patch('/:id/stock', protect, requireAdmin, updateStock);
 router.patch('/:id/threshold', protect, requireAdmin, updateThreshold);
 router.post('/audit-trigger', protect, requireAdmin, triggerManualAudit);
+router.post('/audit', protect, requireAdmin, triggerManualAudit);
 
 export default router;

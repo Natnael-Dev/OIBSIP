@@ -78,6 +78,11 @@ const startServer = async () => {
   });
 };
 
-startServer();
+if (
+  process.env.NODE_ENV !== 'test' &&
+  !process.argv.some((arg) => arg.includes('test'))
+) {
+  startServer();
+}
 
-export { app, httpServer };
+export { app, httpServer, startServer };

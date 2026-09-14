@@ -12,8 +12,9 @@ export const razorpayInstance = new Razorpay({
 export const getRazorpayKeyId = () => key_id;
 
 export const verifyRazorpaySignature = (orderId, paymentId, signature) => {
+  const secret = process.env.RAZORPAY_KEY_SECRET || key_secret;
   // Production HMAC SHA-256 verification
-  const hmac = crypto.createHmac('sha256', key_secret);
+  const hmac = crypto.createHmac('sha256', secret);
   hmac.update(`${orderId}|${paymentId}`);
   const expectedSignature = hmac.digest('hex');
   

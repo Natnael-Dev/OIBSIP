@@ -168,7 +168,11 @@ export const forgotPassword = async (req, res) => {
     user.resetPasswordExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
     await user.save();
 
-    await sendPasswordResetEmail(user.email, resetToken);
+    try {
+      await sendPasswordResetEmail(user.email, resetToken);
+    } catch (mailErr) {
+      console.warn(`[Forgot Password Email Notice] ${mailErr.message}`);
+    }
 
     res.status(200).json({
       success: true,

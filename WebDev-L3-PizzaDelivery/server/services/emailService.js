@@ -5,6 +5,15 @@ let transporter = null;
 const getTransporter = async () => {
   if (transporter) return transporter;
 
+  if (process.env.NODE_ENV === 'test' || process.env.SMTP_USER === 'ethereal_user@ethereal.email') {
+    transporter = {
+      sendMail: async (mailOptions) => {
+        return { messageId: `simulated_${Date.now()}` };
+      }
+    };
+    return transporter;
+  }
+
   if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
     transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
