@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { useCart } from "../../context/CartContext";
+import { useAuth } from "../../context/AuthContext";
 
 const NAV_LINKS = [
   { to: "/", label: "Home" },
@@ -13,6 +15,8 @@ export default function Nav() {
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { totalItems, setIsCartOpen } = useCart();
+  const { user, logout, setIsAuthOpen, setAuthMode } = useAuth();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 60);
@@ -112,12 +116,59 @@ export default function Nav() {
           })}
         </div>
 
-        {/* Desktop right: cart + CTA */}
+        {/* Desktop right: cart + auth + admin + CTA */}
         <div className="hidden md:flex items-center gap-4">
+          {/* Cart Tray Button */}
+          <button
+            onClick={() => setIsCartOpen(true)}
+            className="relative flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer transition-all hover:bg-white/5"
+            style={{
+              border: "1px solid rgba(248,250,252,0.12)",
+              color: "#F8FAFC",
+            }}
+          >
+            <span>Tray</span>
+            <span
+              className="flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold font-mono"
+              style={{
+                background: totalItems > 0 ? "#F59E0B" : "rgba(248,250,252,0.15)",
+                color: totalItems > 0 ? "#080B11" : "#94A3B8",
+              }}
+            >
+              {totalItems}
+            </span>
+          </button>
+
+          {/* User Auth state */}
+          {user ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-300 font-sans">
+                {user.name.split(' ')[0]}
+              </span>
+              <button
+                onClick={logout}
+                className="text-[11px] text-slate-500 hover:text-red-400 transition-colors cursor-pointer"
+                title="Sign Out"
+              >
+                (Logout)
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                setAuthMode('login');
+                setIsAuthOpen(true);
+              }}
+              className="text-xs text-slate-300 hover:text-amber-400 transition-colors cursor-pointer"
+            >
+              Sign In
+            </button>
+          )}
+
           <Link
             to="/admin"
             className="type-label"
-            style={{ color: "rgba(248,250,252,0.35)", fontSize: "11px", textDecoration: "none", letterSpacing: "0.08em" }}
+            style={{ color: "rgba(248,250,252,0.45)", fontSize: "11px", textDecoration: "none", letterSpacing: "0.08em" }}
           >
             Admin
           </Link>
@@ -215,26 +266,53 @@ export default function Nav() {
                 );
               })}
             </div>
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.28, duration: 0.35 }}
-            >
+
+            <div className="flex flex-col gap-3 pt-6 border-t border-white/10">
+              <button
+                onClick={() => {
+                  setMobileOpen(false);
+                  setIsCartOpen(true);
+                }}
+                className="w-full py-3 rounded-full text-center text-sm font-semibold border border-amber-500/30 text-amber-400 bg-amber-500/10 cursor-pointer"
+              >
+                View Tray ({totalItems})
+              </button>
+
+              {user ? (
+                <div className="flex items-center justify-between px-2 text-xs text-slate-400 font-sans">
+                  <span>Signed in as {user.name}</span>
+                  <button onClick={logout} className="text-red-400 underline">
+                    Logout
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => {
+                    setMobileOpen(false);
+                    setAuthMode('login');
+                    setIsAuthOpen(true);
+                  }}
+                  className="w-full py-2.5 rounded-full text-center text-xs font-semibold text-slate-300 border border-white/10 bg-slate-900"
+                >
+                  Sign In / Register
+                </button>
+              )}
+
               <Link
                 to="/builder"
-                className="block text-center py-4 rounded-full"
+                className="block text-center py-3.5 rounded-full mt-1"
                 style={{
                   background: "linear-gradient(135deg, #F59E0B, #D97706)",
                   color: "#080B11",
                   fontFamily: "Switzer, sans-serif",
                   fontWeight: 600,
-                  fontSize: "1rem",
+                  fontSize: "0.95rem",
                   textDecoration: "none",
                 }}
               >
-                Order Now
+                Order Custom Pizza
               </Link>
-            </motion.div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

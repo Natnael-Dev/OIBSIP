@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
+import { getSocket } from '../lib/socket';
 
-type OrderStatus = 'received' | 'kitchen' | 'delivery' | 'delivered';
+type OrderStatus = 'received' | 'in_kitchen' | 'sent_to_delivery' | 'delivered';
 
 interface InventoryRow {
   id: string;
@@ -19,10 +20,12 @@ interface InventoryGroup {
 
 interface Order {
   id: string;
+  rawId: string;
   customer: string;
   items: string;
   time: string;
   status: OrderStatus;
+  total: number;
 }
 
 interface AlertEntry {
@@ -30,25 +33,26 @@ interface AlertEntry {
   item: string;
   current: number;
   threshold: number;
+  status: string;
 }
 
 const STATUS_ORDER: OrderStatus[] = [
   'received',
-  'kitchen',
-  'delivery',
+  'in_kitchen',
+  'sent_to_delivery',
   'delivered',
 ];
+
 const STATUS_LABELS: Record<OrderStatus, string> = {
   received: 'Received',
-  kitchen: 'In Kitchen',
-  delivery: 'Out for Delivery',
+  in_kitchen: 'In Kitchen',
+  sent_to_delivery: 'Out for Delivery',
   delivered: 'Delivered',
 };
 
 function stockColor(stock: number, threshold: number) {
-  const ratio = stock / threshold;
-  if (ratio <= 0.5) return '#EF4444';
-  if (ratio <= 1.0) return '#F59E0B';
+  if (stock === 0) return '#EF4444';
+  if (stock <= threshold) return '#F59E0B';
   return '#10B981';
 }
 
@@ -58,31 +62,47 @@ function InventorySection() {
   const [flashIds, setFlashIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchInventory = () => {
     api
-      .get<{ items: InventoryRow[] }>('/api/inventory')
-      .then(({ items }) => {
+      .get<{ success: boolean; data: any[] }>('/api/inventory')
+      .then((res) => {
+        const rawItems = res.data || [];
         const grouped: InventoryGroup = {};
-        for (const item of items) {
-          const cat = item.category ?? 'Other';
+        for (const item of rawItems) {
+          const cat = (item.category || 'other').toUpperCase();
           if (!grouped[cat]) grouped[cat] = [];
-          grouped[cat].push(item);
+          grouped[cat].push({
+            id: item._id,
+            name: item.name,
+            stock: item.stockQuantity,
+            threshold: item.alertThreshold || 20,
+            category: cat,
+          });
         }
         setInventory(grouped);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchInventory();
   }, []);
 
   const restock = async (category: string, id: string, amount: number) => {
     try {
-      await api.post(`/api/inventory/restock/${id}`, { amount });
+      await api.patch(`/api/inventory/${id}/stock`, {
+        operation: 'add',
+        quantity: amount,
+      });
+
       setInventory((prev) => ({
         ...prev,
-        [category]: prev[category].map((row) =>
+        [category]: (prev[category] || []).map((row) =>
           row.id === id ? { ...row, stock: row.stock + amount } : row,
         ),
       }));
+
       const flashKey = `${category}-${id}`;
       setFlashIds((prev) => new Set(prev).add(flashKey));
       setTimeout(() => {
@@ -99,119 +119,99 @@ function InventorySection() {
 
   if (loading) {
     return (
-      <div
-        style={{
-          color: '#475569',
-          fontFamily: 'Switzer, sans-serif',
-          fontSize: '0.875rem',
-        }}
-      >
-        Loading inventory…
+      <div className="text-slate-400 font-sans text-sm py-4">
+        Loading inventory cockpit…
       </div>
     );
   }
 
   return (
     <div>
-      <h2
-        className="mb-6"
-        style={{
-          fontFamily: 'Instrument Serif, serif',
-          fontSize: '1.25rem',
-          color: '#F8FAFC',
-        }}
-      >
-        Inventory
-      </h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2
+            style={{
+              fontFamily: 'Instrument Serif, serif',
+              fontSize: '1.5rem',
+              color: '#F8FAFC',
+            }}
+          >
+            Live Inventory Management
+          </h2>
+          <p className="text-xs text-slate-400 font-sans">
+            Real-time tracking of pizza bases, sauces, cheeses, and garden veggies with atomic decrement verification.
+          </p>
+        </div>
+        <button
+          onClick={fetchInventory}
+          className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 transition-all border border-white/5"
+        >
+          ↻ Refresh
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {Object.entries(inventory).map(([category, rows]) => (
           <div
             key={category}
-            className="rounded-xl overflow-hidden"
-            style={{ border: '1px solid rgba(248,250,252,0.06)' }}
+            className="rounded-2xl overflow-hidden border border-white/5 bg-slate-900/60 p-4 shadow-xl"
           >
-            <div
-              className="px-4 py-2.5"
-              style={{
-                background: 'rgba(15,23,42,0.8)',
-                borderBottom: '1px solid rgba(248,250,252,0.06)',
-              }}
-            >
-              <span
-                style={{
-                  fontFamily: 'Switzer, sans-serif',
-                  fontSize: '0.7rem',
-                  color: '#64748B',
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                }}
-              >
+            <div className="flex justify-between items-center mb-3 pb-2 border-b border-white/5">
+              <span className="text-[11px] font-mono tracking-widest text-amber-500 font-semibold uppercase">
                 {category}
               </span>
+              <span className="text-[10px] text-slate-400 font-mono">
+                {rows.length} varieties
+              </span>
             </div>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <tbody>
+
+            <table className="w-full text-xs font-sans">
+              <thead>
+                <tr className="text-slate-500 border-b border-white/5">
+                  <th className="text-left pb-2 font-medium">Item</th>
+                  <th className="text-right pb-2 font-medium">Stock</th>
+                  <th className="text-right pb-2 font-medium">Restock</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
                 {rows.map((row) => {
                   const color = stockColor(row.stock, row.threshold);
-                  const flashKey = `${category}-${row.id}`;
-                  const flashing = flashIds.has(flashKey);
+                  const isFlashed = flashIds.has(`${category}-${row.id}`);
                   return (
                     <motion.tr
                       key={row.id}
-                      animate={{
-                        background: flashing
-                          ? 'rgba(245,158,11,0.1)'
-                          : 'rgba(8,11,17,0)',
-                      }}
-                      transition={{ duration: 0.3 }}
-                      style={{
-                        borderBottom: '1px solid rgba(248,250,252,0.04)',
-                      }}
+                      animate={
+                        isFlashed
+                          ? { backgroundColor: 'rgba(16,185,129,0.2)' }
+                          : { backgroundColor: 'transparent' }
+                      }
+                      transition={{ duration: 0.5 }}
                     >
-                      <td
-                        style={{
-                          padding: '0.5rem 1rem',
-                          fontFamily: 'Switzer, sans-serif',
-                          fontSize: '0.8125rem',
-                          color: '#CBD5E1',
-                        }}
-                      >
+                      <td className="py-2 text-slate-300 pr-2 leading-tight">
                         {row.name}
                       </td>
                       <td
-                        style={{
-                          padding: '0.5rem 0.5rem',
-                          fontFamily: 'Switzer, sans-serif',
-                          fontSize: '0.875rem',
-                          fontVariantNumeric: 'tabular-nums',
-                          color,
-                          fontWeight: 500,
-                          width: 48,
-                          textAlign: 'right',
-                        }}
+                        className="py-2 text-right font-mono font-bold"
+                        style={{ color }}
                       >
                         {row.stock}
                       </td>
-                      <td style={{ padding: '0.5rem 1rem', textAlign: 'right' }}>
+                      <td className="py-2 text-right pl-2">
                         <div className="flex gap-1 justify-end">
-                          {[20, 50].map((amt) => (
-                            <button
-                              key={amt}
-                              onClick={() => restock(category, row.id, amt)}
-                              style={{
-                                padding: '0.2rem 0.5rem',
-                                borderRadius: '0.375rem',
-                                background: 'rgba(30,41,59,0.8)',
-                                border: '1px solid rgba(248,250,252,0.08)',
-                                color: '#94A3B8',
-                                fontFamily: 'Switzer, sans-serif',
-                                fontSize: '0.7rem',
-                                cursor: 'pointer',
-                              }}
-                            >
-                              +{amt}
-                            </button>
-                          ))}
+                          <button
+                            onClick={() => restock(category, row.id, 20)}
+                            className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-mono text-slate-300 border border-white/5"
+                            title="Restock +20 units"
+                          >
+                            +20
+                          </button>
+                          <button
+                            onClick={() => restock(category, row.id, 50)}
+                            className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-mono text-slate-300 border border-white/5"
+                            title="Restock +50 units"
+                          >
+                            +50
+                          </button>
                         </div>
                       </td>
                     </motion.tr>
@@ -229,95 +229,72 @@ function InventorySection() {
 // ─── Order Queue ──────────────────────────────────────────────────────────────
 function OrderQueue() {
   const [orders, setOrders] = useState<Order[]>([]);
-  const wsRef = useRef<WebSocket | null>(null);
+  const [loadingOrders, setLoadingOrders] = useState(true);
 
-  // Initial load
-  useEffect(() => {
-    type RawOrder = {
-      _id: string;
-      customer?: { name?: string; email?: string };
-      items: Array<{ pizza?: { name?: string }; quantity?: number }>;
-      createdAt: string;
-      status: string;
-    };
+  const fetchOrders = () => {
     api
-      .get<{ orders: RawOrder[] }>('/api/orders')
-      .then(({ orders: raw }) => {
+      .get<{ success: boolean; data: any[] }>('/api/orders/admin/all')
+      .then((res) => {
+        const rawOrders = res.data || [];
         setOrders(
-          raw.map((o) => ({
-            id: o._id.slice(-6).toUpperCase(),
-            _id: o._id,
-            customer: o.customer?.name ?? o.customer?.email ?? 'Guest',
-            items: o.items
-              .map(
-                (i) => `${i.pizza?.name ?? 'Custom Pizza'} ×${i.quantity ?? 1}`,
-              )
+          rawOrders.map((o) => ({
+            id: o.orderNumber || o._id.slice(-6).toUpperCase(),
+            rawId: o._id,
+            customer: o.customerDetails?.name || o.customer?.name || 'Customer',
+            items: (o.items || [])
+              .map((i: any) => `${i.name || 'Artisanal Pizza'} ×${i.quantity || 1}`)
               .join(', '),
             time: new Date(o.createdAt).toLocaleTimeString('en-GB', {
               hour: '2-digit',
               minute: '2-digit',
             }),
-            status: (o.status as OrderStatus) ?? 'received',
+            status: (o.orderStatus as OrderStatus) || 'received',
+            total: o.totalAmount || 0,
           })),
         );
       })
-      .catch(console.error);
-  }, []);
+      .catch(console.error)
+      .finally(() => setLoadingOrders(false));
+  };
 
-
-  // WebSocket live updates
   useEffect(() => {
-    const WS_URL =
-      (import.meta.env.VITE_API_URL ?? 'http://localhost:5000').replace(
-        /^http/,
-        'ws',
-      ) + '/ws';
-    try {
-      const ws = new WebSocket(WS_URL);
-      wsRef.current = ws;
+    fetchOrders();
 
-      ws.onmessage = (ev) => {
-        try {
-          const msg = JSON.parse(ev.data as string) as {
-            type: string;
-            orderId?: string;
-            status?: string;
-          };
-          if (msg.type === 'order:status' && msg.orderId && msg.status) {
-            setOrders((prev) =>
-              prev.map((o) =>
-                o.id === msg.orderId || (o as Order & { _id?: string })._id === msg.orderId
-                  ? { ...o, status: msg.status as OrderStatus }
-                  : o,
-              ),
-            );
-          }
-        } catch {
-          /* ignore */
-        }
-      };
+    // Attach Socket.io for live incoming orders & status updates
+    const socket = getSocket();
+    socket.emit('join_admin_room');
 
-      ws.onerror = () => {
-        /* silent — server may not have native WS */
-      };
+    const onNewOrder = (orderData: any) => {
+      console.log('[Admin] Live new order received:', orderData);
+      fetchOrders();
+    };
 
-      return () => ws.close();
-    } catch {
-      return () => {};
-    }
+    const onStatusUpdated = (payload: { orderNumber: string; status: OrderStatus }) => {
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === payload.orderNumber ? { ...o, status: payload.status } : o,
+        ),
+      );
+    };
+
+    socket.on('admin:new_order', onNewOrder);
+    socket.on('order:status_updated', onStatusUpdated);
+
+    return () => {
+      socket.off('admin:new_order', onNewOrder);
+      socket.off('order:status_updated', onStatusUpdated);
+    };
   }, []);
 
-  const advance = async (id: string) => {
-    const order = orders.find((o) => o.id === id);
-    if (!order) return;
-    const idx = STATUS_ORDER.indexOf(order.status);
+  const advance = async (rawId: string, currentStatus: OrderStatus) => {
+    const idx = STATUS_ORDER.indexOf(currentStatus);
     if (idx >= STATUS_ORDER.length - 1) return;
     const nextStatus = STATUS_ORDER[idx + 1];
+
     try {
-      const rawId = (order as Order & { _id?: string })._id ?? id;
-      await api.patch(`/api/orders/${rawId}/status`, { status: nextStatus });
+      await api.patch(`/api/orders/admin/${rawId}/status`, { status: nextStatus });
       setOrders((prev) =>
-        prev.map((o) => (o.id === id ? { ...o, status: nextStatus } : o)),
+        prev.map((o) => (o.rawId === rawId ? { ...o, status: nextStatus } : o)),
       );
     } catch (err) {
       console.error('Advance failed:', err);
@@ -326,326 +303,274 @@ function OrderQueue() {
 
   return (
     <div>
-      <h2
-        className="mb-6"
-        style={{
-          fontFamily: 'Instrument Serif, serif',
-          fontSize: '1.25rem',
-          color: '#F8FAFC',
-        }}
-      >
-        Order Queue
-      </h2>
-      <div className="space-y-2">
-        {orders.length === 0 && (
-          <p
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2
             style={{
-              color: '#475569',
-              fontFamily: 'Switzer, sans-serif',
-              fontSize: '0.875rem',
+              fontFamily: 'Instrument Serif, serif',
+              fontSize: '1.5rem',
+              color: '#F8FAFC',
             }}
           >
-            No orders yet.
+            Live Order Dispatch Board
+          </h2>
+          <p className="text-xs text-slate-400 font-sans">
+            Real-time stream of incoming customer orders. Advancing status pushes WebSocket transitions to customer devices.
           </p>
-        )}
-        <AnimatePresence>
-          {orders.map((order) => {
-            const statusColor =
-              order.status === 'delivered'
-                ? '#10B981'
-                : order.status === 'delivery'
+        </div>
+        <button
+          onClick={fetchOrders}
+          className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 transition-all border border-white/5"
+        >
+          ↻ Refresh Orders
+        </button>
+      </div>
+
+      <div className="space-y-2">
+        {loadingOrders ? (
+          <p className="text-slate-400 text-xs font-sans">Loading orders…</p>
+        ) : orders.length === 0 ? (
+          <div className="p-8 rounded-2xl bg-slate-900/40 border border-white/5 text-center text-slate-500 text-xs font-sans">
+            No customer orders placed yet. Place an order in the Customer Builder or Menu to see it live here!
+          </div>
+        ) : (
+          <AnimatePresence>
+            {orders.map((order) => {
+              const statusColor =
+                order.status === 'delivered'
+                  ? '#10B981'
+                  : order.status === 'sent_to_delivery'
                   ? '#F59E0B'
-                  : order.status === 'kitchen'
-                    ? '#06B6D4'
-                    : '#94A3B8';
-            return (
-              <motion.div
-                key={order.id}
-                layout
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, height: 0 }}
-                className="flex items-center gap-4 px-4 py-3 rounded-xl"
-                style={{
-                  background: 'rgba(15,23,42,0.8)',
-                  border: '1px solid rgba(248,250,252,0.05)',
-                }}
-              >
-                <span
-                  style={{
-                    fontFamily: 'Switzer, sans-serif',
-                    fontSize: '0.7rem',
-                    color: '#475569',
-                    fontVariantNumeric: 'tabular-nums',
-                    minWidth: 72,
-                  }}
+                  : order.status === 'in_kitchen'
+                  ? '#06B6D4'
+                  : '#94A3B8';
+
+              return (
+                <motion.div
+                  key={order.rawId}
+                  layout
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="flex flex-wrap items-center gap-4 px-4 py-3.5 rounded-xl bg-slate-900/80 border border-white/5 shadow-md"
                 >
-                  #{order.id}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p
+                  <span className="font-mono text-xs font-bold text-amber-500 min-w-[75px]">
+                    {order.id}
+                  </span>
+
+                  <div className="flex-1 min-w-[200px]">
+                    <p className="text-xs font-semibold text-slate-200">
+                      {order.customer} · <span className="font-mono text-amber-400">£{order.total.toFixed(2)}</span>
+                    </p>
+                    <p className="text-[11px] text-slate-400 truncate">
+                      {order.items}
+                    </p>
+                  </div>
+
+                  <span className="font-mono text-xs text-slate-500">
+                    {order.time}
+                  </span>
+
+                  <span
+                    className="px-2.5 py-1 rounded-full text-[11px] font-semibold text-center min-w-[110px]"
                     style={{
-                      fontFamily: 'Switzer, sans-serif',
-                      fontSize: '0.8125rem',
-                      color: '#CBD5E1',
-                      fontWeight: 500,
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
+                      background: `${statusColor}22`,
+                      color: statusColor,
+                      border: `1px solid ${statusColor}44`,
                     }}
                   >
-                    {order.customer}
-                  </p>
-                  <p
-                    style={{
-                      fontFamily: 'Switzer, sans-serif',
-                      fontSize: '0.7rem',
-                      color: '#475569',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                  >
-                    {order.items}
-                  </p>
-                </div>
-                <span
-                  style={{
-                    fontFamily: 'Switzer, sans-serif',
-                    fontSize: '0.7rem',
-                    color: '#334155',
-                    fontVariantNumeric: 'tabular-nums',
-                  }}
-                >
-                  {order.time}
-                </span>
-                <span
-                  className="px-2.5 py-1 rounded-full"
-                  style={{
-                    fontFamily: 'Switzer, sans-serif',
-                    fontSize: '0.6875rem',
-                    background: `${statusColor}18`,
-                    color: statusColor,
-                    fontWeight: 500,
-                    minWidth: 110,
-                    textAlign: 'center',
-                  }}
-                >
-                  {STATUS_LABELS[order.status]}
-                </span>
-                {order.status !== 'delivered' && (
-                  <button
-                    onClick={() => advance(order.id)}
-                    style={{
-                      padding: '0.25rem 0.625rem',
-                      borderRadius: '0.375rem',
-                      background: 'rgba(30,41,59,0.8)',
-                      border: '1px solid rgba(248,250,252,0.08)',
-                      color: '#94A3B8',
-                      fontFamily: 'Switzer, sans-serif',
-                      fontSize: '0.7rem',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    → Advance
-                  </button>
-                )}
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
+                    {STATUS_LABELS[order.status] || order.status}
+                  </span>
+
+                  {order.status !== 'delivered' && (
+                    <button
+                      onClick={() => advance(order.rawId, order.status)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500 text-slate-950 hover:bg-amber-400 transition-all shadow-sm active:scale-95 cursor-pointer"
+                    >
+                      → Advance
+                    </button>
+                  )}
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        )}
       </div>
     </div>
   );
 }
 
-// ─── Alert Log ────────────────────────────────────────────────────────────────
+// ─── Alert Log & Automated Cron Monitoring ──────────────────────────────────
 function AlertLog() {
   const [alerts, setAlerts] = useState<AlertEntry[]>([]);
+  const [runningAudit, setRunningAudit] = useState(false);
+  const [auditMessage, setAuditMessage] = useState('');
 
-  useEffect(() => {
+  const scanLowStock = () => {
     api
-      .get<{ alerts: Array<{ triggeredAt: string; ingredient: { name?: string }; currentStock: number; threshold: number }> }>('/api/inventory/alerts')
-      .then(({ alerts: raw }) => {
+      .get<{ success: boolean; data: any[] }>('/api/inventory')
+      .then((res) => {
+        const items = res.data || [];
+        const lowItems = items.filter(
+          (i) => i.stockQuantity <= (i.alertThreshold || 20),
+        );
+
         setAlerts(
-          raw.map((a) => ({
-            time: new Date(a.triggeredAt).toLocaleTimeString('en-GB', {
+          lowItems.map((item) => ({
+            time: new Date().toLocaleTimeString('en-GB', {
               hour: '2-digit',
               minute: '2-digit',
             }),
-            item: a.ingredient?.name ?? 'Unknown',
-            current: a.currentStock,
-            threshold: a.threshold,
+            item: item.name,
+            current: item.stockQuantity,
+            threshold: item.alertThreshold || 20,
+            status: item.stockQuantity === 0 ? 'CRITICAL DEPLETED' : 'WARNING LOW',
           })),
         );
       })
-      .catch(() => {
-        /* alerts endpoint may be empty */
-      });
+      .catch(console.error);
+  };
+
+  useEffect(() => {
+    scanLowStock();
   }, []);
+
+  const handleTriggerAudit = async () => {
+    setRunningAudit(true);
+    setAuditMessage('');
+    try {
+      const res = await api.post<{ success: boolean; message: string }>('/api/inventory/audit-trigger', {});
+      setAuditMessage(res.message || 'Audit worker executed successfully.');
+      scanLowStock();
+    } catch (err: unknown) {
+      setAuditMessage(err instanceof Error ? err.message : 'Audit trigger failed');
+    } finally {
+      setRunningAudit(false);
+    }
+  };
 
   return (
     <div>
-      <h2
-        className="mb-4"
-        style={{
-          fontFamily: 'Instrument Serif, serif',
-          fontSize: '1.25rem',
-          color: '#F8FAFC',
-        }}
-      >
-        Low Stock Alerts
-      </h2>
-      <div
-        className="rounded-xl overflow-hidden"
-        style={{ border: '1px solid rgba(248,250,252,0.06)' }}
-      >
-        {alerts.length === 0 && (
-          <div
-            className="px-4 py-3"
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2
             style={{
-              color: '#475569',
-              fontFamily: 'Switzer, sans-serif',
-              fontSize: '0.8125rem',
+              fontFamily: 'Instrument Serif, serif',
+              fontSize: '1.5rem',
+              color: '#F8FAFC',
             }}
           >
-            No low-stock alerts logged.
+            Automated Low-Stock Watcher (`node-cron`)
+          </h2>
+          <p className="text-xs text-slate-400 font-sans">
+            Scheduled background worker audits ingredient reserves every 10 minutes and emails alerts via Nodemailer.
+          </p>
+        </div>
+        <button
+          onClick={handleTriggerAudit}
+          disabled={runningAudit}
+          className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-950 bg-amber-500 hover:bg-amber-400 transition-all shadow-md disabled:opacity-50 cursor-pointer"
+        >
+          {runningAudit ? 'Auditing Reserves…' : '⚡ Trigger Immediate Stock Audit'}
+        </button>
+      </div>
+
+      {auditMessage && (
+        <div className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono">
+          ✓ {auditMessage}
+        </div>
+      )}
+
+      <div className="rounded-xl overflow-hidden border border-white/5 bg-slate-900/60 divide-y divide-white/5">
+        {alerts.length === 0 ? (
+          <div className="px-4 py-4 text-slate-400 font-sans text-xs flex items-center gap-2">
+            <span className="text-emerald-400">✓</span> All ingredient reserves are healthy (&gt; 20 units). Zero emergency breaches detected.
           </div>
+        ) : (
+          alerts.map((alert, i) => (
+            <div key={i} className="flex items-center justify-between px-4 py-3 text-xs">
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-slate-500">{alert.time}</span>
+                <span className="font-semibold text-slate-200">{alert.item}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-red-400 font-bold">
+                  {alert.current} / {alert.threshold} units
+                </span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-red-500/20 text-red-300 border border-red-500/30">
+                  {alert.status}
+                </span>
+              </div>
+            </div>
+          ))
         )}
-        {alerts.map((alert, i) => (
-          <div
-            key={i}
-            className="flex items-center gap-4 px-4 py-3"
-            style={{
-              borderBottom:
-                i < alerts.length - 1
-                  ? '1px solid rgba(248,250,252,0.04)'
-                  : 'none',
-            }}
-          >
-            <span
-              style={{
-                fontFamily: 'Switzer, sans-serif',
-                fontSize: '0.7rem',
-                color: '#334155',
-                fontVariantNumeric: 'tabular-nums',
-                minWidth: 40,
-              }}
-            >
-              {alert.time}
-            </span>
-            <span
-              style={{
-                fontFamily: 'Switzer, sans-serif',
-                fontSize: '0.8125rem',
-                color: '#CBD5E1',
-                flex: 1,
-              }}
-            >
-              {alert.item}
-            </span>
-            <span
-              style={{
-                fontFamily: 'Switzer, sans-serif',
-                fontSize: '0.7rem',
-                color: '#EF4444',
-                fontVariantNumeric: 'tabular-nums',
-              }}
-            >
-              {alert.current} / {alert.threshold}
-            </span>
-            <span
-              className="px-2 py-0.5 rounded-full"
-              style={{
-                fontFamily: 'Switzer, sans-serif',
-                fontSize: '0.65rem',
-                background: 'rgba(16,185,129,0.12)',
-                color: '#10B981',
-              }}
-            >
-              Email sent
-            </span>
-          </div>
-        ))}
       </div>
     </div>
   );
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
+// ─── Main Cockpit Screen ───────────────────────────────────────────────────────
 export default function AdminCockpitPage() {
   const navigate = useNavigate();
 
   const handleLogout = () => {
     localStorage.removeItem('cc_token');
+    localStorage.removeItem('cc_user');
     navigate('/admin/login');
   };
 
   return (
     <div
-      className="min-h-screen"
-      style={{ background: '#080B11', fontFamily: 'Switzer, sans-serif' }}
+      className="min-h-screen text-slate-100 font-sans"
+      style={{ background: '#080B11' }}
     >
-      {/* Top bar */}
+      {/* Top Cockpit Header */}
       <div
         className="sticky top-0 z-50 flex items-center justify-between px-6 py-4"
         style={{
           background: 'rgba(8,11,17,0.92)',
           backdropFilter: 'blur(12px)',
-          borderBottom: '1px solid rgba(248,250,252,0.05)',
+          borderBottom: '1px solid rgba(248,250,252,0.08)',
         }}
       >
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <span
             style={{
               fontFamily: 'Instrument Serif, serif',
-              fontSize: '1.125rem',
+              fontSize: '1.25rem',
               color: '#F8FAFC',
             }}
           >
-            Crust&amp;Craft{' '}
-            <span style={{ color: '#475569' }}>/ Cockpit</span>
+            Crust &amp; Craft <span className="text-amber-500 font-sans text-xs">/ Admin Cockpit</span>
+          </span>
+          <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/20">
+            Level 3 Oasis SIP
           </span>
         </div>
-        <div className="flex items-center gap-3">
+
+        <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <motion.div
-              className="w-1.5 h-1.5 rounded-full"
-              style={{ background: '#10B981' }}
+              className="w-2 h-2 rounded-full bg-emerald-500"
               animate={{ opacity: [1, 0.3, 1] }}
-              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+              transition={{ duration: 1.8, repeat: Infinity }}
             />
-            <span
-              style={{
-                fontFamily: 'Switzer, sans-serif',
-                fontSize: '0.75rem',
-                color: '#10B981',
-              }}
-            >
-              Live sync
+            <span className="text-xs text-emerald-400 font-mono">
+              Live Socket Gateway
             </span>
           </div>
+
           <button
             onClick={handleLogout}
-            style={{
-              fontFamily: 'Switzer, sans-serif',
-              fontSize: '0.75rem',
-              color: '#334155',
-              paddingLeft: '0.75rem',
-              borderLeft: '1px solid rgba(248,250,252,0.08)',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-            } as React.CSSProperties}
+            className="text-xs text-slate-400 hover:text-red-400 transition-colors cursor-pointer pl-3 border-l border-white/10"
           >
-            Log out
+            Sign Out
           </button>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="px-6 py-8 max-w-6xl mx-auto space-y-12">
+      {/* Main Grid Content */}
+      <div className="px-6 py-8 max-w-7xl mx-auto space-y-12">
         <InventorySection />
         <OrderQueue />
         <AlertLog />

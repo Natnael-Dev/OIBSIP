@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import { motion, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import { useCart } from "../../context/CartContext";
 
 type FilterKey = "all" | "vegetarian" | "spicy" | "new";
 
@@ -86,6 +87,7 @@ function PizzaCardItem({ pizza }: { pizza: PizzaCard }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const { addItem, setIsCartOpen } = useCart();
 
   const prefersReducedMotion =
     typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -227,11 +229,28 @@ function PizzaCardItem({ pizza }: { pizza: PizzaCard }) {
               cursor: "pointer",
             }}
             whileTap={{ scale: 0.95 }}
-            animate={{ opacity: hovered ? 1 : 0.7, scale: hovered ? 1 : 0.95 }}
+            animate={{ opacity: hovered ? 1 : 0.85, scale: hovered ? 1 : 0.95 }}
             transition={{ duration: 0.2 }}
-            onClick={(e) => { e.stopPropagation(); navigate("/builder"); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              const priceVal = parseFloat(pizza.price.replace(/[^0-9.]/g, '')) || 18;
+              addItem({
+                id: pizza.id,
+                name: pizza.name,
+                price: priceVal,
+                category: 'Signature Pizza',
+                itemType: 'preset',
+                customization: {
+                  base: 'Classic Hand-Tossed',
+                  sauce: 'San Marzano Marinara',
+                  cheese: 'Fior di Latte Mozzarella',
+                  veggies: ['Sweet Bell Peppers'],
+                },
+              });
+              setIsCartOpen(true);
+            }}
           >
-            Order
+            + Add to Tray
           </motion.button>
         </div>
       </div>
@@ -276,6 +295,7 @@ function FilterTabs({ active, onChange }: { active: FilterKey; onChange: (k: Fil
 export default function MenuGrid() {
   const [filter, setFilter] = useState<FilterKey>("all");
   const carouselRef = useRef<HTMLDivElement>(null);
+  const { addItem, setIsCartOpen } = useCart();
 
   const filtered = filter === "all" ? PIZZAS : PIZZAS.filter((p) => p.tags.includes(filter));
 
@@ -410,7 +430,7 @@ export default function MenuGrid() {
             {EXTRAS.map((item) => (
               <motion.div
                 key={item.id}
-                className="flex-shrink-0 rounded-xl p-5 cursor-pointer"
+                className="flex-shrink-0 rounded-xl p-5 cursor-pointer select-none relative group"
                 style={{
                   width: 200,
                   background: "rgba(15,23,42,0.8)",
@@ -418,14 +438,31 @@ export default function MenuGrid() {
                   borderTop: `2px solid ${item.accentColor}55`,
                 }}
                 whileHover={{ y: -4, borderTopColor: item.accentColor }}
+                whileTap={{ scale: 0.98 }}
                 transition={{ duration: 0.2 }}
+                onClick={() => {
+                  const priceNum = parseFloat(item.price.replace(/[^0-9.]/g, '')) || 5;
+                  addItem({
+                    id: item.id,
+                    name: item.name,
+                    price: priceNum,
+                    category: item.category,
+                    itemType: 'preset',
+                  });
+                  setIsCartOpen(true);
+                }}
               >
-                <span
-                  className="type-label mb-3 block"
-                  style={{ color: item.accentColor, fontSize: "9px" }}
-                >
-                  {item.category}
-                </span>
+                <div className="flex justify-between items-center mb-3">
+                  <span
+                    className="type-label block"
+                    style={{ color: item.accentColor, fontSize: "9px" }}
+                  >
+                    {item.category}
+                  </span>
+                  <span className="text-[10px] text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity font-semibold">
+                    + Add
+                  </span>
+                </div>
                 <p
                   style={{
                     fontFamily: "Instrument Serif, serif",

@@ -10,19 +10,38 @@ export default function AdminLoginPage() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
+  const handleDemoAdmin = () => {
+    setEmail('admin@crustcraft.com');
+    setPassword('AdminSecret2026!');
+    setError('');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     try {
-      const res = await api.post<{ token: string }>('/api/auth/login', {
+      const res = await api.post<{
+        success: boolean;
+        data?: { token: string; admin: { id: string; name: string; email: string; role: string } };
+        token?: string;
+      }>('/api/auth/admin-login', {
         email,
         password,
       });
-      localStorage.setItem('cc_token', res.token);
-      navigate('/admin');
+
+      const authToken = res.data?.token || res.token;
+      if (authToken) {
+        localStorage.setItem('cc_token', authToken);
+        if (res.data?.admin) {
+          localStorage.setItem('cc_user', JSON.stringify(res.data.admin));
+        }
+        navigate('/admin');
+      } else {
+        throw new Error('Invalid response from authentication server');
+      }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      setError(err instanceof Error ? err.message : 'Admin login failed');
     } finally {
       setLoading(false);
     }
@@ -215,6 +234,17 @@ export default function AdminLoginPage() {
             >
               {loading ? 'Signing in…' : 'Sign in'}
             </motion.button>
+
+            <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-xs">
+              <span style={{ color: '#64748B' }}>Evaluating project?</span>
+              <button
+                type="button"
+                onClick={handleDemoAdmin}
+                className="text-amber-400 hover:text-amber-300 underline cursor-pointer font-sans"
+              >
+                1-Click Demo Admin Fill
+              </button>
+            </div>
           </form>
         </div>
 

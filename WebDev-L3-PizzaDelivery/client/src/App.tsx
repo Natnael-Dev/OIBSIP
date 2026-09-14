@@ -1,8 +1,11 @@
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { CartProvider } from './context/CartContext';
+import { AuthProvider } from './context/AuthContext';
 import AmbientLayer from './components/ambient/AmbientLayer';
 import PageTransition from './components/transitions/PageTransition';
 import Nav from './components/shared/Nav';
+import CartDrawer from './components/shared/CartDrawer';
+import AuthModal from './components/shared/AuthModal';
 import ProtectedRoute from './components/shared/ProtectedRoute';
 import HomePage from './pages/HomePage';
 import MenuPage from './pages/MenuPage';
@@ -22,6 +25,10 @@ function AppInner() {
 
       {/* Nav — not shown on admin screens */}
       {!isAdmin && <Nav />}
+
+      {/* Slide-over cart tray & customer auth modal */}
+      {!isAdmin && <CartDrawer />}
+      <AuthModal />
 
       <PageTransition>
         <Routes>
@@ -48,9 +55,11 @@ function AppInner() {
 export default function App() {
   return (
     <BrowserRouter>
-      <CartProvider>
-        <AppInner />
-      </CartProvider>
+      <AuthProvider>
+        <CartProvider>
+          <AppInner />
+        </CartProvider>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

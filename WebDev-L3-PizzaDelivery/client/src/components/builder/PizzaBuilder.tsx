@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { INGREDIENTS, type Ingredient } from '../../lib/ingredients';
-import { api } from '../../lib/api';
-import { useNavigate } from 'react-router-dom';
+import { useCart } from '../../context/CartContext';
 import PizzaCanvas from './PizzaCanvas';
 
 type Category = 'crusts' | 'sauces' | 'cheeses' | 'veggies';
@@ -54,9 +53,8 @@ export default function PizzaBuilder() {
     cheese: null,
     veggies: [],
   });
-  const [ordering, setOrdering] = useState(false);
-  const [orderError, setOrderError] = useState('');
-  const navigate = useNavigate();
+  const { addItem, setIsCartOpen } = useCart();
+  const [addedToast, setAddedToast] = useState(false);
 
   const selectIngredient = (cat: Category, item: Ingredient) => {
     if (cat === 'veggies') {
@@ -96,37 +94,27 @@ export default function PizzaBuilder() {
     (build.cheese ? 2.5 : 0) +
     build.veggies.length * 1.5;
 
-  const handleOrder = async () => {
+  const handleOrder = () => {
     if (!build.crust) return;
-    setOrdering(true);
-    setOrderError('');
-    try {
-      const res = await api.post<{ order: { _id: string } }>('/api/orders', {
-        items: [
-          {
-            pizzaType: 'custom',
-            quantity: 1,
-            customization: {
-              base: build.crust.id,
-              sauce: build.sauce?.id ?? null,
-              cheese: build.cheese?.id ?? null,
-              veggies: build.veggies.map((v) => v.id),
-            },
-            price: total,
-          },
-        ],
-        paymentInfo: {
-          method: 'cod',
-          amount: total + total * 0.08 + 3.5,
-        },
-      });
-      navigate(`/tracking?orderId=${res.order._id}`);
-    } catch (err: unknown) {
-      setOrderError(
-        err instanceof Error ? err.message : 'Order failed — try again',
-      );
-      setOrdering(false);
-    }
+
+    const pizzaName = `Custom ${build.crust.label} Pizza`;
+    addItem({
+      id: `custom-${Date.now()}`,
+      name: pizzaName,
+      price: total,
+      category: 'Custom Pizza',
+      itemType: 'custom',
+      customization: {
+        base: build.crust.label,
+        sauce: build.sauce ? build.sauce.label : 'San Marzano Marinara',
+        cheese: build.cheese ? build.cheese.label : 'Fior di Latte Mozzarella',
+        veggies: build.veggies.map((v) => v.label),
+      },
+    });
+
+    setAddedToast(true);
+    setTimeout(() => setAddedToast(false), 2000);
+    setIsCartOpen(true);
   };
 
   return (
@@ -327,23 +315,23 @@ export default function PizzaBuilder() {
                 )}
               </div>
 
-              {orderError && (
+              {addedToast && (
                 <div
-                  className="mb-4 px-3 py-2 rounded-lg text-xs"
+                  className="mb-4 px-3 py-2 rounded-lg text-xs text-center"
                   style={{
-                    background: 'rgba(239,68,68,0.1)',
-                    color: '#EF4444',
+                    background: 'rgba(16,185,129,0.15)',
+                    color: '#10B981',
                     fontFamily: 'Switzer, sans-serif',
-                    border: '1px solid rgba(239,68,68,0.25)',
+                    border: '1px solid rgba(16,185,129,0.3)',
                   }}
                 >
-                  {orderError}
+                  ✓ Custom pizza added to tray! Opening checkout…
                 </div>
               )}
 
               <button
                 onClick={handleOrder}
-                className="w-full py-3.5 rounded-full text-sm font-semibold cursor-pointer"
+                className="w-full py-3.5 rounded-full text-sm font-semibold cursor-pointer shadow-lg transition-all hover:brightness-110 active:scale-[0.99]"
                 style={{
                   background: build.crust
                     ? 'linear-gradient(135deg, #F59E0B, #D97706)'
@@ -352,17 +340,13 @@ export default function PizzaBuilder() {
                   fontFamily: 'Switzer, sans-serif',
                   fontWeight: 600,
                   border: 'none',
-                  transition: 'background 0.3s',
-                  cursor: build.crust && !ordering ? 'pointer' : 'default',
-                  opacity: ordering ? 0.7 : 1,
+                  cursor: build.crust ? 'pointer' : 'default',
                 }}
-                disabled={!build.crust || ordering}
+                disabled={!build.crust}
               >
-                {ordering
-                  ? 'Placing order…'
-                  : build.crust
-                    ? `Add to Order — £${total.toFixed(2)}`
-                    : 'Select a crust to continue'}
+                {build.crust
+                  ? `Add to Tray — £${total.toFixed(2)}`
+                  : 'Select a crust to continue'}
               </button>
             </div>
           </div>
